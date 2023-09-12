@@ -5,13 +5,21 @@ use crate::registers::Registers;
 pub struct CPU {
     bus: Bus,
     registers: Registers,
+    frame_buffer: FrameBuffer,
 }
 
+pub type FrameBuffer = [u8; 64 * 32];
+    
 impl CPU {
     pub fn new() -> CPU {
+        let mut buffer: FrameBuffer = [0; 64 * 32];
+        for i in 0..buffer.len() {
+            if (i + i) % 3 == 0 { buffer[i] = 1 };
+        }
         return CPU {
             bus: Bus::new(),
             registers: Registers::new(),
+            frame_buffer: buffer,
         }
     }
 
@@ -27,6 +35,10 @@ impl CPU {
         }
 
         Ok(())
+    }
+
+    pub fn frame_buffer(&self) -> FrameBuffer {
+        return self.frame_buffer;
     }
 
     fn fetch(&mut self) -> Result<u16, Error> {
