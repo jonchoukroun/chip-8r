@@ -40,7 +40,7 @@ fn main() -> Result<(), String> {
             },
 
         }
-        // display.render(cpu.frame_buffer());
+        display.render(cpu.frame_buffer());
 
         // TODO: audio.emit();
 
