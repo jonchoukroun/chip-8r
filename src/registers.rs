@@ -1,5 +1,5 @@
-const REGISTER_COUNT: u8 = 8;
-const STACK_SIZE: u8 = 8;
+use crate::constants::{REGISTER_COUNT, STACK_SIZE};
+
 pub struct Registers {
     // Program Counter
     pub pc: u16,

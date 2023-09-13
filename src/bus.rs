@@ -1,11 +1,12 @@
-const RAM_SIZE: u16 = 0x0fff;
+use crate::constants;
+
 pub struct Bus {
-    ram: [u8; (RAM_SIZE - 1) as usize],
+    ram: [u8; (constants::RAM_SIZE - 1) as usize],
 }
 
 impl Bus {
     pub fn new() -> Bus {
-        let ram = [0 as u8; (RAM_SIZE - 1) as usize];
+        let ram = [0 as u8; (constants::RAM_SIZE - 1) as usize];
         // TODO: write fonts in memory
         return Bus { ram };
     }

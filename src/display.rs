@@ -7,10 +7,13 @@ use sdl2::Sdl;
 use sdl2::video::Window;
 
 use crate::cpu::FrameBuffer;
-
-const WINDOW_TITLE: &str = "CHIP-8r";
-const WINDOW_WIDTH: u32 = 640;
-const WINDOW_HEIGHT: u32 = 320;
+use crate::constants::{
+    DISPLAY_WIDTH,
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    WINDOW_TITLE,
+    PIXEL_SIZE
+};
 
 pub struct Display {
     canvas: Canvas<Window>,
@@ -27,26 +30,35 @@ impl Display {
             .build()
             .map_err(|e| e.to_string())?;
             
-        let canvas = window
+        let mut canvas = window
             .into_canvas()
             .build()
             .map_err(|e| e.to_string())?;
+
+        canvas.set_draw_color(Color::BLACK);
+        canvas.clear();
+        canvas.present();
 
         return Ok(Display { canvas });
     }
 
     pub fn render(&mut self, buffer: FrameBuffer) {
+        self.clear_canvas();
+
         self.canvas.set_draw_color(Color::CYAN);
-        for y in 0..32 {
-            for x in 0..64 {
-                if buffer[y * 64 + x] == 1 {
-                    self.canvas.fill_rect(Rect::new(
-                        (x * 10) as i32,
-                        (y * 10) as i32,
-                        10,
-                        10
-                    )).unwrap();
-                }
+        for i in 0..buffer.len() {
+            if buffer[i] == 1 {
+                let x = (i as i32 % DISPLAY_WIDTH as i32)
+                    * PIXEL_SIZE as i32;
+                let y = (i as i32 / DISPLAY_WIDTH as i32)
+                    * PIXEL_SIZE as i32;
+                let rect = Rect::new(
+                    x,
+                    y,
+                    PIXEL_SIZE,
+                    PIXEL_SIZE,
+                );
+                self.canvas.fill_rect(rect).unwrap();
             }
         }
         self.canvas.present();
@@ -55,6 +67,5 @@ impl Display {
     fn clear_canvas(&mut self) {
         self.canvas.set_draw_color(Color::BLACK);
         self.canvas.clear();
-        self.canvas.present();
     }
 }

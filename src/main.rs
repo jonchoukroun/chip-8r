@@ -1,15 +1,17 @@
 extern crate sdl2;
 
-use sdl2::event::Event;
 use std::time::Duration;
 
 use crate::cpu::CPU;
 use crate::display::Display;
+use crate::keyboard::Keyboard;
 
 mod bus;
+mod constants;
 mod cpu;
 mod display;
 mod error;
+mod keyboard;
 mod registers;
 
 fn main() -> Result<(), String> {
@@ -19,21 +21,17 @@ fn main() -> Result<(), String> {
         Ok(display) => display,
         Err(e) => { return Err(e); }
     };
-    // let keyboard = Keyboard::new(&sdl_context);
+    display.render(cpu.frame_buffer());
+    let mut keyboard = match Keyboard::new(&sdl_context) {
+        Ok(keyboard) => keyboard,
+        Err(e) => { return Err(e); }
+    };
     // let audio = Audio::new(&sdl_context);
-
-    let mut event_pump = sdl_context.event_pump()?;
 
     let mut running = true;
     while running {
-        // TODO: keyboard.handle_input();
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit {..} => { running = false; },
-                _ => {},
-            }
+        running = keyboard.handle_input();
 
-        }
         match cpu.cycle() {
             Ok(()) => (),
             Err(error) => {
@@ -42,7 +40,7 @@ fn main() -> Result<(), String> {
             },
 
         }
-        display.render(cpu.frame_buffer());
+        // display.render(cpu.frame_buffer());
 
         // TODO: audio.emit();
 
