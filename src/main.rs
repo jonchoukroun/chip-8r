@@ -1,6 +1,11 @@
 extern crate sdl2;
 
-use std::time::Duration;
+use std::{
+    thread,
+    time::{Duration, Instant}
+};
+
+use constants::{MS_PER_FRAME, MS_PER_CYCLE};
 
 use crate::cpu::CPU;
 use crate::display::Display;
@@ -29,7 +34,10 @@ fn main() -> Result<(), String> {
     // let audio = Audio::new(&sdl_context);
 
     let mut running = true;
+    let mut fps_timer = Instant::now();
     while running {
+        let cycle_timer = Instant::now();
+
         running = keyboard.handle_input();
 
         match cpu.cycle() {
@@ -40,12 +48,21 @@ fn main() -> Result<(), String> {
             },
 
         }
-        display.render(cpu.frame_buffer());
+
+        if fps_timer.elapsed().as_millis() as f32 >= MS_PER_FRAME {
+            display.render(cpu.frame_buffer());
+
+            // TODO: sound timer
+
+            // TODO: delay timer
+
+            fps_timer = Instant::now();
+        }
 
         // TODO: audio.emit();
 
-        // TODO: cpu.adjust_cycles();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
+        let remaining = MS_PER_CYCLE - cycle_timer.elapsed().as_millis() as f32;
+        thread::sleep(Duration::from_millis(remaining as u64));
     }
 
     Ok(())
