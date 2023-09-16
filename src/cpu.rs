@@ -34,6 +34,10 @@ impl CPU {
         match (opcode & 0xf000) >> 12 {
             0x0 => self.opcode_0(opcode),
             0x1 => self.opcode_1(opcode),
+            0x2 => self.opcode_2(opcode),
+            0x3 => self.opcode_3(opcode),
+            0x4 => self.opcode_4(opcode),
+            0x5 => self.opcode_5(opcode),
             0x6 => self.opcode_6(opcode),
             0x7 => self.opcode_7(opcode),
             0xa => self.opcode_a(opcode),
@@ -41,7 +45,7 @@ impl CPU {
             _ => println!("Undefined opcode: {:#X}", opcode),
         }
 
-        Ok(())
+        return Ok(());
     }
 
     pub fn frame_buffer(&self) -> FrameBuffer {
@@ -83,10 +87,48 @@ impl CPU {
         }
     }
 
-    // JMP
+    // JMP nnn
     fn opcode_1(&mut self, opcode: u16) {
         self.registers.pc = opcode & 0x0fff;
         println!("JMP, {:#X}", self.registers.pc);
+    }
+
+    // CALL nnn
+    fn opcode_2(&mut self, opcode: u16) {
+        self.registers.sp += 1;
+        self.registers.stack[self.registers.sp as usize] = self.registers.pc;
+        self.registers.pc = opcode & 0x0fff;
+        println!("CALL, {:#X}", opcode & 0x0fff);
+    }
+
+    // SE Vx, kk
+    fn opcode_3(&mut self, opcode: u16) {
+        let x = ((opcode & 0x0f00) >> 8) as usize;
+        let kk = opcode & 0x00ff;
+        if self.registers.v[x as usize] as u16 == kk {
+            self.registers.pc += 2;
+        }
+        println!("SE, V[{:#X}, {:#X}", self.registers.v[x], kk);
+    }
+
+    // SNE Vx, kk
+    fn opcode_4(&mut self, opcode: u16) {
+        let x = ((opcode & 0x0f00) >> 8) as usize;
+        let kk = opcode & 0x00ff;
+        if self.registers.v[x] as u16 != kk {
+            self.registers.pc += 2;
+        }
+        println!("SNE, V[{:#X}], {:#X}", self.registers.v[x], kk);
+    }
+
+    // SE Vx, Vy
+    fn opcode_5(&mut self, opcode: u16) {
+        let x = ((opcode & 0x0f00) >> 8) as usize;
+        let y = ((opcode & 0x00f0) >> 4) as usize;
+        if self.registers.v[x] == self.registers.v[y] {
+            self.registers.pc += 2;
+        }
+        println!("SE, V[{:#X}], V[{:#X}]", self.registers.v[x], self.registers.v[y]);
     }
 
     // LD Vx
