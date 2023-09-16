@@ -6,7 +6,7 @@ pub struct Registers {
     // Address Register
     pub i: u16,
     // Stack Pointer
-    pub sp: u8,
+    pub sp: usize,
     pub stack: [u16; STACK_SIZE as usize],
     // Variable Registers
     pub v: [u8; REGISTER_COUNT as usize],

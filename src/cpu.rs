@@ -40,6 +40,8 @@ impl CPU {
             0x5 => self.opcode_5(opcode),
             0x6 => self.opcode_6(opcode),
             0x7 => self.opcode_7(opcode),
+            0x8 => self.opcode_8(opcode),
+            0x9 => self.opcode_9(opcode),
             0xa => self.opcode_a(opcode),
             0xd => self.opcode_d(opcode),
             _ => println!("Undefined opcode: {:#X}", opcode),
@@ -62,6 +64,7 @@ impl CPU {
         self.registers.pc += 1;
 
         let opcode = (high << 8) | low;
+        println!("CPU fetch {:#X}, PC now at {:#X}", opcode, self.registers.pc);
 
         return Ok(opcode);
     }
@@ -74,13 +77,11 @@ impl CPU {
             // CLS
             0x00e0 => {
                 self.frame_buffer = [0; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize];
-                println!("CLS");
             },
             // RET
             0x00ee => {
-                self.registers.pc = self.registers.stack[self.registers.sp as usize];
+                self.registers.pc = self.registers.stack[self.registers.sp];
                 self.registers.sp -= 1;
-                println!("RET");
             }
             // SYS
             nibble => println!("sysjmp => {}", nibble),
@@ -90,94 +91,129 @@ impl CPU {
     // JMP nnn
     fn opcode_1(&mut self, opcode: u16) {
         self.registers.pc = opcode & 0x0fff;
-        println!("JMP, {:#X}", self.registers.pc);
     }
 
     // CALL nnn
     fn opcode_2(&mut self, opcode: u16) {
         self.registers.sp += 1;
-        self.registers.stack[self.registers.sp as usize] = self.registers.pc;
+        self.registers.stack[self.registers.sp] = self.registers.pc;
         self.registers.pc = opcode & 0x0fff;
-        println!("CALL, {:#X}", opcode & 0x0fff);
     }
 
     // SE Vx, kk
     fn opcode_3(&mut self, opcode: u16) {
-        let x = ((opcode & 0x0f00) >> 8) as usize;
-        let kk = opcode & 0x00ff;
-        if self.registers.v[x as usize] as u16 == kk {
+        if self.registers.v[get_x(opcode)] == get_kk(opcode) {
             self.registers.pc += 2;
         }
-        println!("SE, V[{:#X}, {:#X}", self.registers.v[x], kk);
     }
 
     // SNE Vx, kk
     fn opcode_4(&mut self, opcode: u16) {
-        let x = ((opcode & 0x0f00) >> 8) as usize;
-        let kk = opcode & 0x00ff;
-        if self.registers.v[x] as u16 != kk {
+        if self.registers.v[get_x(opcode)] != get_kk(opcode) {
             self.registers.pc += 2;
         }
-        println!("SNE, V[{:#X}], {:#X}", self.registers.v[x], kk);
     }
 
     // SE Vx, Vy
     fn opcode_5(&mut self, opcode: u16) {
-        let x = ((opcode & 0x0f00) >> 8) as usize;
-        let y = ((opcode & 0x00f0) >> 4) as usize;
-        if self.registers.v[x] == self.registers.v[y] {
+        if self.registers.v[get_x(opcode)] == self.registers.v[get_y(opcode)] {
             self.registers.pc += 2;
         }
-        println!("SE, V[{:#X}], V[{:#X}]", self.registers.v[x], self.registers.v[y]);
     }
 
     // LD Vx
     fn opcode_6(&mut self, opcode: u16) {
-        let x = (opcode & 0x0f00) >> 8;
-        let kk = opcode & 0x00ff;
-        self.registers.v[x as usize] = kk as u8;
-        println!("LD v[{:#X}], {:#X}", x, kk);
+        self.registers.v[get_x(opcode)] = get_kk(opcode);
     }
 
     // ADD Vx
     fn opcode_7(&mut self, opcode: u16) {
-        let x = (opcode & 0x0f00) >> 8;
-        let kk = opcode & 0x00ff;
-        self.registers.v[x as usize] += kk as u8;
-        println!("ADD v[{:#X}], {:#X}", x, kk);
+        self.registers.v[get_x(opcode)] += get_kk(opcode);
+    }
+
+    // Bitwise, Carry Arithmetic Instructions
+    fn opcode_8(&mut self, opcode: u16) {
+        match opcode & 0x000f {
+            // LD Vx, Vy
+            0x0 => self.registers.v[get_x(opcode)] = self.registers.v[get_y(opcode)],
+            // OR Vx, Yy
+            0x1 => self.registers.v[get_x(opcode)] |= self.registers.v[get_y(opcode)],
+            // AND Vx, Vy
+            0x2 => self.registers.v[get_x(opcode)] &= self.registers.v[get_y(opcode)],
+            // XOR Vx, Vy
+            0x3 => self.registers.v[get_x(opcode)] ^= self.registers.v[get_y(opcode)],
+            // ADC Vx, Vy
+            0x4 => {
+                let x = self.registers.v[get_x(opcode)];
+                let y = self.registers.v[get_y(opcode)];
+                self.registers.v[get_x(opcode)] = x.wrapping_add(y);
+                if 0xff - x > y { self.registers.v[FLAG_REGISTER] = 1; }
+                else { self.registers.v[FLAG_REGISTER] = 0; }
+            },
+            // SUB Vx, Vy
+            0x5 => {
+                let x = self.registers.v[get_x(opcode)];
+                let y = self.registers.v[get_y(opcode)];
+                self.registers.v[get_x(opcode)] = x.wrapping_sub(y);
+                if x > y { self.registers.v[FLAG_REGISTER] = 1; }
+                else { self.registers.v[FLAG_REGISTER] = 0; }
+            },
+            // SHR Vx
+            0x6 => {
+                let x = self.registers.v[get_x(opcode)];
+                self.registers.v[FLAG_REGISTER] = x & 0b1;
+                self.registers.v[get_x(opcode)] = x >> 1;
+            },
+            // SUB Vy, Vx
+            0x7 => {
+                let x = self.registers.v[get_x(opcode)];
+                let y = self.registers.v[get_y(opcode)];
+                self.registers.v[get_x(opcode)] = y.wrapping_sub(x);
+                if y > x { self.registers.v[FLAG_REGISTER] = 1; }
+                else { self.registers.v[FLAG_REGISTER] = 0; }
+            },
+            // SHL Vx
+            0xe => {
+                let x = self.registers.v[get_x(opcode)];
+                self.registers.v[FLAG_REGISTER] = x & 0b10000000;
+                self.registers.v[get_x(opcode)] = x << 1;
+            },
+            _ => println!("Invalid opcode {:#X}", opcode),
+        }
+    }
+
+    fn opcode_9(&mut self, opcode: u16) {
+        if self.registers.v[get_x(opcode)] != self.registers.v[get_y(opcode)] {
+            self.registers.pc += 2;
+        }
     }
 
     // LD I
     fn opcode_a(&mut self, opcode: u16) {
-        self.registers.i = opcode & 0x0fff;
-        println!("LD I, {:#X}", self.registers.i);
+        self.registers.i = opcode & get_nnn(opcode);
     }
 
     // DRW
     fn opcode_d(&mut self, opcode: u16) {
-        let x_reg = (opcode & 0x0f00) >> 8;
-        let y_reg = (opcode & 0x00f0) >> 4;
-        let n = opcode & 0x000f;
-
-        let x = self.registers.v[x_reg as usize] % DISPLAY_WIDTH as u8;
-        let y = self.registers.v[y_reg as usize] % DISPLAY_HEIGHT as u8;
+        let x = self.registers.v[get_x(opcode)] % DISPLAY_WIDTH as u8;
+        let y = self.registers.v[get_y(opcode)] % DISPLAY_HEIGHT as u8;
         let i = self.registers.i;
 
         println!("DRW {:#X}", opcode);
 
         self.registers.v[FLAG_REGISTER] = 0;
 
-        for row in 0..n {
-            let sprite = self.bus.read_byte(i + row);
-            for col in 0..(SPRITE_WIDTH as u16) {
-                let pixel_x = x as u16 + col;
-                if pixel_x >= DISPLAY_WIDTH as u16 { break; };
+        for row in 0..get_n(opcode) {
+            let sprite = self.bus.read_byte(i + row as u16);
+            for col in 0..(SPRITE_WIDTH as u8) {
+                let pixel_x = x + col;
+                if pixel_x >= DISPLAY_WIDTH as u8 { break; };
 
-                let pixel_y = y as u16 + row;
-                if pixel_y >= DISPLAY_HEIGHT as u16 { break; };
+                let pixel_y = y + row;
+                if pixel_y >= DISPLAY_HEIGHT as u8 { break; };
 
                 let pixel_idx: usize = (
-                    pixel_y * DISPLAY_WIDTH as u16 + pixel_x
+                    pixel_y as usize * DISPLAY_WIDTH as usize + pixel_x as usize
                 ).into();
                 let current_pixel = self.frame_buffer[pixel_idx];
                 let new_pixel = (sprite & (BIT_MASK >> col)) >>
@@ -189,4 +225,24 @@ impl CPU {
             }
         }
     }
+}
+
+fn get_x(opcode: u16) -> usize {
+    return ((opcode & 0x0f00) >> 8) as usize;
+}
+
+fn get_y(opcode: u16) -> usize {
+    return ((opcode & 0x00f0) >> 4) as usize;
+}
+
+fn get_n(opcode: u16) -> u8 {
+    return (opcode & 0x000f) as u8;
+}
+
+fn get_kk(opcode: u16) -> u8 {
+    return (opcode & 0x00ff) as u8;
+}
+
+fn get_nnn(opcode: u16) -> u16 {
+    return opcode & 0x0fff;
 }
