@@ -1,28 +1,54 @@
+extern crate sdl2;
+
 use crate::bus::Bus;
 use crate::constants::{
     BIT_MASK, DISPLAY_HEIGHT, DISPLAY_WIDTH, FLAG_REGISTER, SPRITE_WIDTH
 };
+use crate::display::Display;
 use crate::error::{Error, ErrorType};
+use crate::keyboard::Keyboard;
 use crate::registers::Registers;
 
 pub struct CPU {
     bus: Bus,
     registers: Registers,
     frame_buffer: FrameBuffer,
+    display: Display,
+    keyboard: Keyboard,
 }
 
 pub type FrameBuffer = [u8; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize];
     
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new() -> Result<CPU, String> {
+        let sdl_context = sdl2::init()?;
+
         let buffer: FrameBuffer = [
             0; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize
         ];
-        return CPU {
+
+        let display = match Display::new(&sdl_context) {
+            Ok(display) => display,
+            Err(e) => { return Err(e); },
+        };
+        let keyboard = match Keyboard::new(&sdl_context) {
+            Ok(keyboard) => keyboard,
+            Err(e) => { return Err(e); },
+        };
+
+        // let audio = Audio::new(&sdl_context);
+
+        return Ok(CPU {
             bus: Bus::new(),
             registers: Registers::new(),
             frame_buffer: buffer,
-        }
+            display,
+            keyboard,
+        });
+    }
+
+    pub fn handle_input(&mut self) -> bool {
+        return self.keyboard.handle_input();
     }
 
     pub fn cycle(&mut self) -> Result<(), Error> {
@@ -52,8 +78,8 @@ impl CPU {
         return Ok(());
     }
 
-    pub fn frame_buffer(&self) -> FrameBuffer {
-        return self.frame_buffer;
+    pub fn render(&mut self) {
+        self.display.render(self.frame_buffer);
     }
 
     fn fetch(&mut self) -> Result<u16, Error> {
