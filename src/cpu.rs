@@ -43,6 +43,8 @@ impl CPU {
             0x8 => self.opcode_8(opcode),
             0x9 => self.opcode_9(opcode),
             0xa => self.opcode_a(opcode),
+            0xb => self.opcode_b(opcode),
+            0xc => self.opcode_c(opcode),
             0xd => self.opcode_d(opcode),
             _ => println!("Undefined opcode: {:#X}", opcode),
         }
@@ -191,6 +193,17 @@ impl CPU {
     // LD I
     fn opcode_a(&mut self, opcode: u16) {
         self.registers.i = opcode & get_nnn(opcode);
+    }
+
+    // JP V0, nnn
+    fn opcode_b(&mut self, opcode: u16) {
+        self.registers.pc = self.registers.v[0] as u16 + get_nnn(opcode);
+    }
+
+    // RND Vx, kk
+    fn opcode_c(&mut self, opcode: u16) {
+        let rnd = rand::random::<u8>();
+        self.registers.v[get_x(opcode)] = rnd & get_kk(opcode);
     }
 
     // DRW
