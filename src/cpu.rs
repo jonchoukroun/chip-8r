@@ -2,10 +2,17 @@ extern crate sdl2;
 
 use crate::bus::Bus;
 use crate::constants::{
-    BIT_MASK, DISPLAY_HEIGHT, DISPLAY_WIDTH, FLAG_REGISTER, SPRITE_WIDTH
+    BIT_MASK,
+    DISPLAY_HEIGHT,
+    DISPLAY_WIDTH,
+    FLAG_REGISTER,
+    SPRITE_WIDTH,
+    FONT_HEIGHT,
+    FONT_RAM_START
 };
 use crate::display::Display;
 use crate::error::{Error, ErrorType};
+use crate::GameState;
 use crate::keyboard::Keyboard;
 use crate::registers::Registers;
 
@@ -47,17 +54,17 @@ impl CPU {
         });
     }
 
-    pub fn handle_input(&mut self) -> bool {
+    pub fn handle_input(&mut self) -> GameState {
         return self.keyboard.handle_input();
     }
 
-    pub fn cycle(&mut self) -> Result<(), Error> {
+    pub fn cycle(&mut self) -> Result<GameState, Error> {
         let opcode = match self.fetch() {
             Ok(instruction) => instruction,
             Err(e) => return Err(e),
         };
 
-        match (opcode & 0xf000) >> 12 {
+        let state = match (opcode & 0xf000) >> 12 {
             0x0 => self.opcode_0(opcode),
             0x1 => self.opcode_1(opcode),
             0x2 => self.opcode_2(opcode),
@@ -72,10 +79,14 @@ impl CPU {
             0xb => self.opcode_b(opcode),
             0xc => self.opcode_c(opcode),
             0xd => self.opcode_d(opcode),
-            _ => println!("Undefined opcode: {:#X}", opcode),
-        }
+            0xe => self.opcode_e(opcode),
+            0xf => self.opcode_f(opcode),
+            _ => {
+                return Err(Error::new(ErrorType::InvalidOpcode));
+            }
+        };
 
-        return Ok(());
+        return Ok(state);
     }
 
     pub fn render(&mut self) {
@@ -100,7 +111,7 @@ impl CPU {
 
 // Instructions
 impl CPU {
-    fn opcode_0(&mut self, opcode: u16) {
+    fn opcode_0(&mut self, opcode: u16) -> GameState {
         match opcode {
             // CLS
             0x00e0 => {
@@ -114,53 +125,63 @@ impl CPU {
             // SYS
             nibble => println!("sysjmp => {}", nibble),
         }
+
+        return GameState::Playing;
     }
 
     // JMP nnn
-    fn opcode_1(&mut self, opcode: u16) {
+    fn opcode_1(&mut self, opcode: u16) -> GameState {
         self.registers.pc = opcode & 0x0fff;
+        return  GameState::Playing;
     }
 
     // CALL nnn
-    fn opcode_2(&mut self, opcode: u16) {
+    fn opcode_2(&mut self, opcode: u16) -> GameState {
         self.registers.sp += 1;
         self.registers.stack[self.registers.sp] = self.registers.pc;
         self.registers.pc = opcode & 0x0fff;
+
+        return GameState::Playing;
     }
 
     // SE Vx, kk
-    fn opcode_3(&mut self, opcode: u16) {
+    fn opcode_3(&mut self, opcode: u16) -> GameState {
         if self.registers.v[get_x(opcode)] == get_kk(opcode) {
             self.registers.pc += 2;
         }
+        return GameState::Playing;
     }
 
     // SNE Vx, kk
-    fn opcode_4(&mut self, opcode: u16) {
+    fn opcode_4(&mut self, opcode: u16) -> GameState {
         if self.registers.v[get_x(opcode)] != get_kk(opcode) {
             self.registers.pc += 2;
         }
+        return GameState::Playing;
     }
 
     // SE Vx, Vy
-    fn opcode_5(&mut self, opcode: u16) {
+    fn opcode_5(&mut self, opcode: u16) -> GameState {
         if self.registers.v[get_x(opcode)] == self.registers.v[get_y(opcode)] {
             self.registers.pc += 2;
         }
+        return  GameState::Playing;
     }
 
     // LD Vx
-    fn opcode_6(&mut self, opcode: u16) {
+    fn opcode_6(&mut self, opcode: u16) -> GameState {
         self.registers.v[get_x(opcode)] = get_kk(opcode);
+        return  GameState::Playing;
     }
 
     // ADD Vx
-    fn opcode_7(&mut self, opcode: u16) {
+    fn opcode_7(&mut self, opcode: u16) -> GameState {
         self.registers.v[get_x(opcode)] += get_kk(opcode);
+        return GameState::Playing;
     }
 
     // Bitwise, Carry Arithmetic Instructions
-    fn opcode_8(&mut self, opcode: u16) {
+    fn opcode_8(&mut self, opcode: u16) -> GameState {
         match opcode & 0x000f {
             // LD Vx, Vy
             0x0 => self.registers.v[get_x(opcode)] = self.registers.v[get_y(opcode)],
@@ -208,37 +229,41 @@ impl CPU {
             },
             _ => println!("Invalid opcode {:#X}", opcode),
         }
+    
+        return GameState::Playing;
     }
 
-    fn opcode_9(&mut self, opcode: u16) {
+    fn opcode_9(&mut self, opcode: u16) -> GameState {
         if self.registers.v[get_x(opcode)] != self.registers.v[get_y(opcode)] {
             self.registers.pc += 2;
         }
+        return  GameState::Playing;
     }
 
     // LD I
-    fn opcode_a(&mut self, opcode: u16) {
+    fn opcode_a(&mut self, opcode: u16) -> GameState {
         self.registers.i = opcode & get_nnn(opcode);
+        return  GameState::Playing;
     }
 
     // JP V0, nnn
-    fn opcode_b(&mut self, opcode: u16) {
+    fn opcode_b(&mut self, opcode: u16) -> GameState {
         self.registers.pc = self.registers.v[0] as u16 + get_nnn(opcode);
+        return  GameState::Playing;
     }
 
     // RND Vx, kk
-    fn opcode_c(&mut self, opcode: u16) {
+    fn opcode_c(&mut self, opcode: u16) -> GameState {
         let rnd = rand::random::<u8>();
         self.registers.v[get_x(opcode)] = rnd & get_kk(opcode);
+        return  GameState::Playing;
     }
 
     // DRW
-    fn opcode_d(&mut self, opcode: u16) {
+    fn opcode_d(&mut self, opcode: u16) -> GameState {
         let x = self.registers.v[get_x(opcode)] % DISPLAY_WIDTH as u8;
         let y = self.registers.v[get_y(opcode)] % DISPLAY_HEIGHT as u8;
         let i = self.registers.i;
-
-        println!("DRW {:#X}", opcode);
 
         self.registers.v[FLAG_REGISTER] = 0;
 
@@ -262,6 +287,89 @@ impl CPU {
                     self.registers.v[FLAG_REGISTER] = 1;
                 }
             }
+        }
+
+        return  GameState::Playing;
+    }
+
+    fn opcode_e(&mut self, opcode: u16) -> GameState {
+        let x = self.registers.v[get_x(opcode)];
+        match get_kk(opcode) {
+            // SKP Vx
+            0x9e => {
+                if self.keyboard.is_pressed(x) {
+                    self.registers.pc += 2;
+                }
+            },
+            // SKNP Vx
+            0xa1 => {
+                if !self.keyboard.is_pressed(x) {
+                    self.registers.pc += 2;
+                }
+            },
+            _ => println!("Invalid opcode {:#X}", opcode),
+        }
+
+        return  GameState::Playing;
+    }
+
+    fn opcode_f(&mut self, opcode: u16) -> GameState {
+        match get_kk(opcode) {
+            // LD Vx, DT
+            0x07 => {
+                self.registers.v[get_x(opcode)] = self.registers.dt;
+                return GameState::Playing;
+            },
+            0x0a => {
+                return GameState::Paused;
+            },
+            // LD DT, Vx
+            0x15 => {
+                self.registers.dt = self.registers.v[get_x(opcode)];
+                return GameState::Playing;
+            },
+            // LD ST, Vx
+            0x18 => {
+                self.registers.st = self.registers.v[get_x(opcode)];
+                return GameState::Playing;
+            },
+            // ADD I, Vx
+            0x1e => {
+                self.registers.i += self.registers.v[get_x(opcode)] as u16;
+                return GameState::Playing;
+            },
+            // LD F, Vx
+            0x29 => {
+                let x = self.registers.v[get_x(opcode)] & 0xf;
+                self.registers.i = x as u16 
+                    * FONT_HEIGHT as u16
+                    + FONT_RAM_START as u16;
+                return GameState::Playing;
+            },
+            0x33 => {
+                return GameState::Playing;
+            },
+            // LD [I], Vx
+            0x55 => {
+                let i = self.registers.i as usize;
+                for j in 0..=get_x(opcode) as usize {
+                    self.bus.write_byte(i + j, self.registers.v[j]);
+                }
+                return GameState::Playing;
+            },
+            // LD Vx, [I]
+            0x65 => {
+                let i = self.registers.i;
+                for j in 0..=get_x(opcode) {
+                    self.registers.v[j] = self.bus.read_byte(i + j as u16);
+                }
+                return GameState::Playing;
+            },
+            _ => {
+                println!("Invalid opcode {:#X}", opcode);
+                return GameState::Playing;
+            }
+
         }
     }
 }

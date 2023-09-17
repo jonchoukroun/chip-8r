@@ -18,24 +18,32 @@ mod registers;
 fn main() -> Result<(), String> {
     let mut cpu = CPU::new()?;
 
-    let mut running = true;
+    let mut state = GameState::Playing;
     let mut fps_timer = Instant::now();
-    while running {
+    while state != GameState::Ended {
         let cycle_timer = Instant::now();
 
-        running = cpu.handle_input();
+        state = match cpu.handle_input() {
+            GameState::Ended => { break; },
+            _ if state == GameState::Paused => GameState::Paused,
+            new_state => new_state,
+        };
 
-        match cpu.cycle() {
-            Ok(()) => (),
-            Err(error) => {
-                dbg!(error);
-                running = false;
-            },
+        if state == GameState::Playing {
+            state = match cpu.cycle() {
+                Ok(new_state) => new_state,
+                Err(error) => {
+                    dbg!(error);
+                    break;
+                },
 
+            };
         }
 
         if fps_timer.elapsed().as_millis() as f32 >= MS_PER_FRAME {
-            cpu.render();
+            if state == GameState::Playing {
+                cpu.render();
+            }
 
             // TODO: sound timer
 
@@ -51,4 +59,11 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[derive(PartialEq, Debug)]
+pub enum GameState {
+    Playing,
+    Paused,
+    Ended,
 }

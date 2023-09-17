@@ -35,8 +35,8 @@ impl Bus {
         return self.ram[(addr & 0xffff) as usize];
     }
 
-    pub fn write_byte(&mut self, addr: u8, byte: u8) {
-        return self.ram[addr as usize] = byte;
+    pub fn write_byte(&mut self, addr: usize, byte: u8) {
+        return self.ram[addr] = byte;
     }
 }
 
