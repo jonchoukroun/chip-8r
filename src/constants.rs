@@ -18,7 +18,7 @@ pub const WINDOW_WIDTH: u32 = DISPLAY_WIDTH * PIXEL_SIZE;
 pub const WINDOW_HEIGHT: u32 = DISPLAY_HEIGHT * PIXEL_SIZE;
 pub const SPRITE_WIDTH: u8 = 8;
 
-pub const KEYBOARD_SIZE: usize = 0xf;
+pub const KEYBOARD_SIZE: usize = 16;
 
 pub const MS_PER_FRAME: f32 = 1000.0 / 60.0;
 pub const MS_PER_CYCLE: f32 = 1000.0 / 500.0;

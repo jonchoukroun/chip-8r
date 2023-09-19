@@ -23,7 +23,7 @@ fn main() -> Result<(), String> {
     while state != GameState::Ended {
         let cycle_timer = Instant::now();
 
-        state = match cpu.handle_input() {
+        state = match cpu.handle_input(&state) {
             GameState::Ended => { break; },
             _ if state == GameState::Paused => GameState::Paused,
             new_state => new_state,
@@ -36,8 +36,9 @@ fn main() -> Result<(), String> {
                     dbg!(error);
                     break;
                 },
-
             };
+        } else if state == GameState::Paused {
+            cpu.check_input(&mut state);
         }
 
         if fps_timer.elapsed().as_millis() as f32 >= MS_PER_FRAME {
@@ -61,7 +62,7 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GameState {
     Playing,
     Paused,

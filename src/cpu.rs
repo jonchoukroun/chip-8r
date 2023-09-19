@@ -13,7 +13,7 @@ use crate::constants::{
 use crate::display::Display;
 use crate::error::{Error, ErrorType};
 use crate::GameState;
-use crate::keyboard::Keyboard;
+use crate::keyboard::{Keyboard, handle_input, is_pressed, to_hex};
 use crate::registers::Registers;
 
 pub struct CPU {
@@ -22,6 +22,7 @@ pub struct CPU {
     frame_buffer: FrameBuffer,
     display: Display,
     keyboard: Keyboard,
+    last_opcode: u16,
 }
 
 pub type FrameBuffer = [u8; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize];
@@ -51,11 +52,12 @@ impl CPU {
             frame_buffer: buffer,
             display,
             keyboard,
+            last_opcode: 0x0000,
         });
     }
 
-    pub fn handle_input(&mut self) -> GameState {
-        return self.keyboard.handle_input();
+    pub fn handle_input(&mut self, state: &GameState) -> GameState {
+        return handle_input(&mut self.keyboard, state);
     }
 
     pub fn cycle(&mut self) -> Result<GameState, Error> {
@@ -93,6 +95,26 @@ impl CPU {
         self.display.render(self.frame_buffer);
     }
 
+    pub fn check_input(&mut self, game_state: &mut GameState) {
+        if *game_state != GameState::Paused { return };
+        
+        match self.keyboard.key_state.iter()
+            .find_map(
+                |(k, &v)| if v == true { Some(k) } else { None }
+            ) {
+                None => (),
+                Some(scancode) => {
+                    let x = get_x(self.last_opcode);
+                    let kk = match to_hex(*scancode) {
+                        Some(x) => x,
+                        None => { return; },
+                    };
+                    self.registers.v[x as usize] = kk;
+                    *game_state = GameState::Playing;
+                }
+            }
+    }
+
     fn fetch(&mut self) -> Result<u16, Error> {
         if self.registers.pc < 0x200 || self.registers.pc >= 0xffe {
             return Err(Error::new(ErrorType::InaccessibleMemoryAddress))
@@ -103,6 +125,7 @@ impl CPU {
         self.registers.pc += 1;
 
         let opcode = (high << 8) | low;
+        self.last_opcode = opcode;
         println!("CPU fetch {:#X}, PC now at {:#X}", opcode, self.registers.pc);
 
         return Ok(opcode);
@@ -297,13 +320,13 @@ impl CPU {
         match get_kk(opcode) {
             // SKP Vx
             0x9e => {
-                if self.keyboard.is_pressed(x) {
+                if is_pressed(x, &self.keyboard) {
                     self.registers.pc += 2;
                 }
             },
             // SKNP Vx
             0xa1 => {
-                if !self.keyboard.is_pressed(x) {
+                if !is_pressed(x, &self.keyboard) {
                     self.registers.pc += 2;
                 }
             },
