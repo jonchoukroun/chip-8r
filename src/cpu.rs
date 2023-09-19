@@ -199,7 +199,9 @@ impl CPU {
 
     // ADD Vx
     fn opcode_7(&mut self, opcode: u16) -> GameState {
-        self.registers.v[get_x(opcode)] += get_kk(opcode);
+        let x = get_x(opcode) as u8;
+        let value = self.registers.v[x as usize];
+        self.registers.v[x as usize] = value.wrapping_add(get_kk(opcode));
         return GameState::Playing;
     }
 
