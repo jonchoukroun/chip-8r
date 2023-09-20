@@ -42,13 +42,9 @@ fn main() -> Result<(), String> {
         }
 
         if fps_timer.elapsed().as_millis() as f32 >= MS_PER_FRAME {
-            if state == GameState::Playing {
-                cpu.render();
-            }
+            if state == GameState::Playing { cpu.render(); }
 
-            // TODO: sound timer
-
-            // TODO: delay timer
+            cpu.decrement_timers();
 
             fps_timer = Instant::now();
         }

@@ -60,6 +60,26 @@ impl CPU {
         return handle_input(&mut self.keyboard, state);
     }
 
+    pub fn check_input(&mut self, game_state: &mut GameState) {
+        if *game_state != GameState::Paused { return };
+        
+        match self.keyboard.key_state.iter()
+            .find_map(
+                |(k, &v)| if v == true { Some(k) } else { None }
+            ) {
+                None => (),
+                Some(scancode) => {
+                    let x = get_x(self.last_opcode);
+                    let kk = match to_hex(*scancode) {
+                        Some(x) => x,
+                        None => { return; },
+                    };
+                    self.registers.v[x as usize] = kk;
+                    *game_state = GameState::Playing;
+                }
+            }
+    }
+
     pub fn cycle(&mut self) -> Result<GameState, Error> {
         let opcode = match self.fetch() {
             Ok(instruction) => instruction,
@@ -95,24 +115,9 @@ impl CPU {
         self.display.render(self.frame_buffer);
     }
 
-    pub fn check_input(&mut self, game_state: &mut GameState) {
-        if *game_state != GameState::Paused { return };
-        
-        match self.keyboard.key_state.iter()
-            .find_map(
-                |(k, &v)| if v == true { Some(k) } else { None }
-            ) {
-                None => (),
-                Some(scancode) => {
-                    let x = get_x(self.last_opcode);
-                    let kk = match to_hex(*scancode) {
-                        Some(x) => x,
-                        None => { return; },
-                    };
-                    self.registers.v[x as usize] = kk;
-                    *game_state = GameState::Playing;
-                }
-            }
+    pub fn decrement_timers(&mut self) {
+        if self.registers.dt > 0 { self.registers.dt -= 1; }
+        if self.registers.st > 0 { self.registers.st -= 1; }
     }
 
     fn fetch(&mut self) -> Result<u16, Error> {
