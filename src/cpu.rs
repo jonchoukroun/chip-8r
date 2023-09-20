@@ -379,10 +379,11 @@ impl CPU {
             },
             // LD BCD, Vx
             0x33 => {
-                let x = get_x(opcode) as u8;
-                self.bus.write_byte(self.registers.i as usize, x / 100);
-                self.bus.write_byte((self.registers.i + 1) as usize, x % 100 / 10);
-                self.bus.write_byte((self.registers.i + 2) as usize, x % 10);
+                let i = self.registers.i as usize;
+                let x = self.registers.v[get_x(opcode)];
+                self.bus.write_byte(i, x / 100);
+                self.bus.write_byte(i + 1, x % 100 / 10);
+                self.bus.write_byte(i + 2, x % 10);
                 return GameState::Playing;
             },
             // LD [I], Vx
