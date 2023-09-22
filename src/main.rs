@@ -7,6 +7,7 @@ use constants::{MS_PER_FRAME, MS_PER_CYCLE};
 
 use crate::cpu::CPU;
 
+mod audio;
 mod bus;
 mod constants;
 mod cpu;
@@ -49,7 +50,7 @@ fn main() -> Result<(), String> {
             fps_timer = Instant::now();
         }
 
-        // TODO: audio.emit();
+        cpu.play_audio();
 
         let remaining = MS_PER_CYCLE - cycle_timer.elapsed().as_millis() as f32;
         thread::sleep(Duration::from_millis(remaining as u64));

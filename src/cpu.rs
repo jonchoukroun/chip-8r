@@ -1,5 +1,6 @@
 extern crate sdl2;
 
+use crate::audio::Audio;
 use crate::bus::Bus;
 use crate::constants::{
     BIT_MASK,
@@ -17,12 +18,13 @@ use crate::keyboard::{Keyboard, handle_input, is_pressed, to_hex};
 use crate::registers::Registers;
 
 pub struct CPU {
+    audio: Audio,
     bus: Bus,
-    registers: Registers,
-    frame_buffer: FrameBuffer,
     display: Display,
+    frame_buffer: FrameBuffer,
     keyboard: Keyboard,
     last_opcode: u16,
+    registers: Registers,
 }
 
 pub type FrameBuffer = [u8; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize];
@@ -43,16 +45,19 @@ impl CPU {
             Ok(keyboard) => keyboard,
             Err(e) => { return Err(e); },
         };
-
-        // let audio = Audio::new(&sdl_context);
+        let audio = match Audio::new(&sdl_context) {
+            Ok(audio) => audio,
+            Err(e) => { return Err(e); },
+        };
 
         return Ok(CPU {
+            audio,
             bus: Bus::new(),
-            registers: Registers::new(),
-            frame_buffer: buffer,
             display,
+            frame_buffer: buffer,
             keyboard,
             last_opcode: 0x0000,
+            registers: Registers::new(),
         });
     }
 
@@ -118,6 +123,15 @@ impl CPU {
     pub fn decrement_timers(&mut self) {
         if self.registers.dt > 0 { self.registers.dt -= 1; }
         if self.registers.st > 0 { self.registers.st -= 1; }
+    }
+
+    pub fn play_audio(&mut self) {
+        if self.registers.st > 0 && !self.audio.is_playing {
+            self.audio.play();
+        }
+        if self.registers.st <= 0 && self.audio.is_playing {
+            self.audio.stop();
+        }
     }
 
     fn fetch(&mut self) -> Result<u16, Error> {
