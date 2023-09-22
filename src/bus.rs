@@ -46,26 +46,27 @@ fn load_fonts(ram: &mut RamType) {
     }
 }
 
-fn load_test_rom(ram: &mut RamType) {
-    let rom: [u8; 8] = [
-        // LD I, 1000
-        0xa3, 0xe8,
-        // LD v6, 137
-        0x66, 0x89,
-        // LD BCD, v6
-        0xf6, 0x33,
-        // DEBUG
-        0x01, 0x01,
-    ];
-    for i in 0..rom.len() {
-        ram[PROGRAM_RAM_START + i] = rom[i];
-    }
-}
+// fn load_test_rom(ram: &mut RamType) {
+//     let rom: [u8; 6] = [
+//         // LD v0, 3 sec = 0xb4
+//         0x60, 0xb4,
+//         // LD ST, V0
+//         0xf0, 0x18,
+//         // LD v1, K
+//         0xf1, 0x0a
+//     ];
+//     for i in 0..rom.len() {
+//         ram[PROGRAM_RAM_START + i] = rom[i];
+//     }
+// }
 
 fn load_rom(ram: &mut RamType) -> Result<(), Box<dyn Error>> {
     let mut buffer: Vec<u8> = Vec::new();
     // let mut file = File::open("./roms/IBM Logo.ch8")?;
-    let mut file = File::open("./roms/test_opcode.ch8")?;
+    // let mut file = File::open("./roms/test_opcode.ch8")?;
+    // let mut file = File::open("./roms/4-flags.ch8")?;
+    // let mut file = File::open("./roms/5-quirks.ch8")?;
+    let mut file = File::open("./roms/6-keypad.ch8")?;
     let rom_size = file.read_to_end(&mut buffer)?;
 
     if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {

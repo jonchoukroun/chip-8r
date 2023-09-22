@@ -240,7 +240,7 @@ impl CPU {
                 let x = self.registers.v[get_x(opcode)];
                 let y = self.registers.v[get_y(opcode)];
                 self.registers.v[get_x(opcode)] = x.wrapping_add(y);
-                if 0xff - x > y { self.registers.v[FLAG_REGISTER] = 1; }
+                if x as u16 + y as u16 > 0xff { self.registers.v[FLAG_REGISTER] = 1; }
                 else { self.registers.v[FLAG_REGISTER] = 0; }
             },
             // SUB Vx, Vy
@@ -251,11 +251,11 @@ impl CPU {
                 if x > y { self.registers.v[FLAG_REGISTER] = 1; }
                 else { self.registers.v[FLAG_REGISTER] = 0; }
             },
-            // SHR Vx
+            // SHR Vx, Vy
             0x6 => {
-                let x = self.registers.v[get_x(opcode)];
-                self.registers.v[FLAG_REGISTER] = x & 0b1;
-                self.registers.v[get_x(opcode)] = x >> 1;
+                let y = self.registers.v[get_y(opcode)];
+                self.registers.v[FLAG_REGISTER] = y & 0b1;
+                self.registers.v[get_x(opcode)] = y >> 1;
             },
             // SUB Vy, Vx
             0x7 => {
@@ -265,11 +265,11 @@ impl CPU {
                 if y > x { self.registers.v[FLAG_REGISTER] = 1; }
                 else { self.registers.v[FLAG_REGISTER] = 0; }
             },
-            // SHL Vx
+            // SHL Vx, Vy
             0xe => {
-                let x = self.registers.v[get_x(opcode)];
-                self.registers.v[FLAG_REGISTER] = x & 0b10000000;
-                self.registers.v[get_x(opcode)] = x << 1;
+                let y = self.registers.v[get_y(opcode)];
+                self.registers.v[FLAG_REGISTER] = y & 0b10000000;
+                self.registers.v[get_x(opcode)] = y << 1;
             },
             _ => println!("Invalid opcode {:#X}", opcode),
         }
