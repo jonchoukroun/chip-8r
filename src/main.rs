@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant}
 };
 
-use constants::{MS_PER_FRAME, MS_PER_CYCLE};
+use constants::{MS_PER_FRAME, MICROS_PER_CYCLE};
 
 use crate::cpu::CPU;
 
@@ -52,8 +52,8 @@ fn main() -> Result<(), String> {
 
         cpu.play_audio();
 
-        let remaining = MS_PER_CYCLE - cycle_timer.elapsed().as_millis() as f32;
-        thread::sleep(Duration::from_millis(remaining as u64));
+        let remaining = MICROS_PER_CYCLE - cycle_timer.elapsed().as_micros() as f32;
+        thread::sleep(Duration::from_micros(remaining as u64));
     }
 
     Ok(())
