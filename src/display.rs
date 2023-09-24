@@ -12,7 +12,7 @@ use crate::constants::{
     WINDOW_WIDTH,
     WINDOW_HEIGHT,
     WINDOW_TITLE,
-    PIXEL_SIZE
+    PIXEL_SIZE, FG_RED, FG_GREEN, FG_BLUE, BG_RED, BG_GREEN, BG_BLUE
 };
 
 pub struct Display {
@@ -35,7 +35,7 @@ impl Display {
             .build()
             .map_err(|e| e.to_string())?;
 
-        canvas.set_draw_color(Color::BLACK);
+        canvas.set_draw_color(Color::RGB(BG_RED, BG_GREEN, BG_BLUE));
         canvas.clear();
         canvas.present();
 
@@ -45,7 +45,8 @@ impl Display {
     pub fn render(&mut self, buffer: FrameBuffer) {
         self.clear_canvas();
 
-        self.canvas.set_draw_color(Color::CYAN);
+        // self.canvas.set_draw_color(Color::CYAN);
+        self.canvas.set_draw_color(Color::RGB(FG_RED, FG_GREEN, FG_BLUE));
         for i in 0..buffer.len() {
             if buffer[i] == 1 {
                 let x = (i as i32 % DISPLAY_WIDTH as i32)

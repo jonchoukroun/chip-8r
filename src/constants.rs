@@ -17,6 +17,12 @@ pub const PIXEL_SIZE: u32 = 15;
 pub const WINDOW_WIDTH: u32 = DISPLAY_WIDTH * PIXEL_SIZE;
 pub const WINDOW_HEIGHT: u32 = DISPLAY_HEIGHT * PIXEL_SIZE;
 pub const SPRITE_WIDTH: u8 = 8;
+pub const BG_RED: u8 = 28;
+pub const BG_GREEN: u8 = 28;
+pub const BG_BLUE: u8 = 28;
+pub const FG_RED: u8 = 51;
+pub const FG_GREEN: u8 = 255;
+pub const FG_BLUE: u8 = 51;
 
 pub const KEYBOARD_SIZE: usize = 16;
 
