@@ -145,7 +145,7 @@ impl CPU {
 
         let opcode = (high << 8) | low;
         self.last_opcode = opcode;
-        println!("CPU fetch {:#X}, PC now at {:#X}", opcode, self.registers.pc);
+        // println!("CPU fetch {:#X}, PC now at {:#X}", opcode, self.registers.pc);
 
         return Ok(opcode);
     }
@@ -254,8 +254,8 @@ impl CPU {
             // SHR Vx, Vy
             0x6 => {
                 let y = self.registers.v[get_y(opcode)];
-                self.registers.v[FLAG_REGISTER] = y & 0b1;
                 self.registers.v[get_x(opcode)] = y >> 1;
+                self.registers.v[FLAG_REGISTER] = y & 1;
             },
             // SUB Vy, Vx
             0x7 => {
@@ -268,8 +268,8 @@ impl CPU {
             // SHL Vx, Vy
             0xe => {
                 let y = self.registers.v[get_y(opcode)];
-                self.registers.v[FLAG_REGISTER] = y & 0b10000000;
                 self.registers.v[get_x(opcode)] = y << 1;
+                self.registers.v[FLAG_REGISTER] = (y & 0b10000000) >> 7;
             },
             _ => println!("Invalid opcode {:#X}", opcode),
         }
