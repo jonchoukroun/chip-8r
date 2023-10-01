@@ -42,10 +42,9 @@ impl Display {
         return Ok(Display { canvas });
     }
 
-    pub fn render(&mut self, buffer: FrameBuffer) {
+    pub fn render(&mut self, buffer: &FrameBuffer) {
         self.clear_canvas();
 
-        // self.canvas.set_draw_color(Color::CYAN);
         self.canvas.set_draw_color(Color::RGB(FG_RED, FG_GREEN, FG_BLUE));
         for i in 0..buffer.len() {
             if buffer[i] == 1 {

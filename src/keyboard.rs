@@ -6,7 +6,7 @@ use sdl2::{
 };
 use std::collections::HashMap;
 
-use crate::{GameState, constants::KEYBOARD_SIZE};
+use crate::constants::KEYBOARD_SIZE;
 
 type KeyState = HashMap<Scancode, bool>;
 pub struct Keyboard {
@@ -41,6 +41,37 @@ impl Keyboard {
         );
     }
 
+    pub fn handle_input(&mut self) -> bool {
+        for event in self.event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} => { return false; },
+                Event::KeyDown { scancode: Some(scancode), ..} => {
+                    match scancode {
+                        Scancode::Escape => {
+                            return false;
+                        },
+                        s if self.key_state.contains_key(&s) => {
+                            self.key_state.entry(s)
+                                .and_modify(|v| *v = true);
+                        }
+                        _ => ()
+                    }
+                },
+                Event::KeyUp {scancode: Some(scancode), ..} => {
+                    match scancode {
+                        s if self.key_state.contains_key(&s) => {
+                            self.key_state.entry(s)
+                                .and_modify(|v| *v = false);
+                        }
+                        _ => ()
+                    }
+                }
+                _ => ()
+            }
+        }
+        
+        return true
+    }
 }
 
 pub fn to_hex(scancode: Scancode) -> Option<u8> {
@@ -88,37 +119,6 @@ pub fn to_scancode(key: usize) -> Option<Scancode> {
     } else {
         return Some(scancode[key]);
     }
-}
-
-pub fn handle_input(keyboard: &mut Keyboard, game_state: &GameState) -> GameState {
-    for event in keyboard.event_pump.poll_iter() {
-        match event {
-            Event::Quit {..} => { return GameState::Ended; },
-            Event::KeyDown { scancode: Some(scancode), ..} => {
-                match scancode {
-                    Scancode::Escape => {
-                        return GameState::Ended;
-                    },
-                    s if keyboard.key_state.contains_key(&s) => {
-                        keyboard.key_state.entry(s)
-                            .and_modify(|v| *v = true);
-                    }
-                    _ => ()
-                }
-            },
-            Event::KeyUp {scancode: Some(scancode), ..} => {
-                match scancode {
-                    s if keyboard.key_state.contains_key(&s) => {
-                        keyboard.key_state.entry(s)
-                            .and_modify(|v| *v = false);
-                    }
-                    _ => ()
-                }
-            }
-            _ => { return *game_state; }
-        }
-    }
-    return GameState::Playing;
 }
 
 pub fn is_pressed(key: u8, keyboard: &Keyboard) -> bool {

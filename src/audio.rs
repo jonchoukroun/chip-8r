@@ -5,7 +5,7 @@ use crate::constants::{WAVETABLE_SIZE, PITCH, SAMPLE_RATE, VOLUME, CHANNELS};
 pub struct Audio {
     // oscillator: Oscillator,
     device: AudioDevice<Oscillator>,
-    pub is_playing: bool,
+    playing: bool,
 }
 
 impl Audio {
@@ -28,19 +28,22 @@ impl Audio {
 
         return Ok(Audio {
             device,
-            is_playing: false,
+            playing: false,
         });
     }
 
     pub fn play(&mut self) {
         self.device.resume();
-        self.is_playing = true;
+        self.playing = true;
     }
 
     pub fn stop(&mut self) {
         self.device.pause();
-        self.is_playing = false;
+        self.playing = false;
     }
+
+    // Getters
+    pub fn is_playing(&self) -> bool { self.playing }
 }
 
 type WaveTable = [f32; WAVETABLE_SIZE];

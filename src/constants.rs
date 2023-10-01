@@ -26,7 +26,7 @@ pub const FG_BLUE: u8 = 51;
 
 pub const KEYBOARD_SIZE: usize = 16;
 
-pub const MS_PER_FRAME: f32 = 1000.0 / 60.0;
+pub const MICROS_PER_FRAME: u128 = 1_000_000 / 60;
 pub const MICROS_PER_CYCLE: f32 = 1_000_000.0 / 700.0;
 
 pub const SAMPLE_RATE: f32 = 441000.0;

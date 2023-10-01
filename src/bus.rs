@@ -1,9 +1,12 @@
+extern crate sdl2;
+
 use std::{
     error::Error,
     fs::File,
     io::Read,
 };
 
+use crate::audio::Audio;
 use crate::constants::{
     FONT_RAM_START,
     FONT_RAM_END,
@@ -11,26 +14,79 @@ use crate::constants::{
     PROGRAM_RAM_END, RAM_SIZE,
     FONT_HEIGHT
 };
+use crate::cpu::FrameBuffer;
+use crate::display::Display;
+use crate::keyboard::Keyboard;
 
 type RamType = [u8; (RAM_SIZE - 1) as usize];
 pub struct Bus {
+    audio: Audio,
+    display: Display,
+    keyboard: Keyboard,
     ram: RamType
 }
 
 impl Bus {
-    pub fn new() -> Bus {
-        let mut ram = [0 as u8; (RAM_SIZE - 1) as usize];
-        load_fonts(&mut ram);
+    pub fn new() -> Result<Bus, String> {
+        let sdl_context = sdl2::init()?;
 
-        // load_test_rom(&mut ram);
+        let audio = Audio::new(&sdl_context)?;
+        let display = Display::new(&sdl_context)?;
+        let keyboard = Keyboard::new(&sdl_context)?;
 
-        match load_rom(&mut ram) {
-            Ok(()) => println!("ROM load successful"),
-            Err(x) => println!("Error: {}", x),
+        Ok(Bus {
+            audio,
+            display,
+            keyboard,
+            ram: [0 as u8; (RAM_SIZE - 1) as usize],
+        })
+    }
+
+    pub fn init_ram(&mut self) {
+        load_fonts(&mut self.ram);
+    }
+
+    pub fn load_rom(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut file = File::open("./roms/1-chip8-logo.ch8")?;
+        // let mut file = File::open("./roms/2-ibm-logo.ch8")?;
+        // let mut file = File::open("./roms/3-corax+.ch8")?;
+        // let mut file = File::open("./roms/4-flags.ch8")?;
+        // let mut file = File::open("./roms/5-quirks.ch8")?;
+        // let mut file = File::open("./roms/6-keypad.ch8")?;
+        let rom_size = file.read_to_end(&mut buffer)?;
+
+        if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
+            return Err("invalid ROM".into());
         }
 
-        return Bus { ram };
+        for i in 0..buffer.len() {
+            self.ram[PROGRAM_RAM_START + i] = buffer[i];
+        }
+
+        Ok(())
     }
+
+    pub fn handle_input(&mut self) -> bool {
+        return self.keyboard.handle_input();
+    }
+
+    pub fn render(&mut self, buffer: &FrameBuffer) {
+        self.display.render(buffer);
+    }
+
+    pub fn play_audio(&mut self) {
+        if !self.audio.is_playing() {
+            self.audio.play();
+        }
+    }
+
+    pub fn stop_audio(&mut self) {
+        if self.audio.is_playing() {
+            self.audio.stop();
+        }
+    }
+
     pub fn read_byte(&self, addr: u16) -> u8 {
         return self.ram[(addr & 0xffff) as usize];
     }
@@ -59,27 +115,6 @@ fn load_fonts(ram: &mut RamType) {
 //         ram[PROGRAM_RAM_START + i] = rom[i];
 //     }
 // }
-
-fn load_rom(ram: &mut RamType) -> Result<(), Box<dyn Error>> {
-    let mut buffer: Vec<u8> = Vec::new();
-    // let mut file = File::open("./roms/1-chip8-logo.ch8")?;
-    // let mut file = File::open("./roms/2-ibm-logo.ch8")?;
-    // let mut file = File::open("./roms/3-corax+.ch8")?;
-    let mut file = File::open("./roms/4-flags.ch8")?;
-    // let mut file = File::open("./roms/5-quirks.ch8")?;
-    // let mut file = File::open("./roms/6-keypad.ch8")?;
-    let rom_size = file.read_to_end(&mut buffer)?;
-
-    if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
-        return Err("invalid ROM".into());
-    }
-
-    for i in 0..buffer.len() {
-        ram[PROGRAM_RAM_START + i] = buffer[i];
-    }
-
-    Ok(())
-}
 
 type FontHex = [u8; FONT_HEIGHT];
 const FONT_SPRITES: [FontHex; 16] = [
