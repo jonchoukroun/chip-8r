@@ -3,7 +3,6 @@ use sdl2::{Sdl, audio::{AudioDevice, AudioCallback, AudioSpecDesired}};
 use crate::constants::{WAVETABLE_SIZE, PITCH, SAMPLE_RATE, VOLUME, CHANNELS};
 
 pub struct Audio {
-    // oscillator: Oscillator,
     device: AudioDevice<Oscillator>,
     playing: bool,
 }

@@ -22,7 +22,7 @@ type RamType = [u8; (RAM_SIZE - 1) as usize];
 pub struct Bus {
     audio: Audio,
     display: Display,
-    keyboard: Keyboard,
+    pub keyboard: Keyboard,
     ram: RamType
 }
 
@@ -48,12 +48,12 @@ impl Bus {
 
     pub fn load_rom(&mut self) -> Result<(), Box<dyn Error>> {
         let mut buffer: Vec<u8> = Vec::new();
-        let mut file = File::open("./roms/1-chip8-logo.ch8")?;
+        // let mut file = File::open("./roms/1-chip8-logo.ch8")?;
         // let mut file = File::open("./roms/2-ibm-logo.ch8")?;
         // let mut file = File::open("./roms/3-corax+.ch8")?;
         // let mut file = File::open("./roms/4-flags.ch8")?;
         // let mut file = File::open("./roms/5-quirks.ch8")?;
-        // let mut file = File::open("./roms/6-keypad.ch8")?;
+        let mut file = File::open("./roms/6-keypad.ch8")?;
         let rom_size = file.read_to_end(&mut buffer)?;
 
         if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
@@ -85,6 +85,14 @@ impl Bus {
         if self.audio.is_playing() {
             self.audio.stop();
         }
+    }
+
+    pub fn is_pressed(&self, key: u8) -> bool {
+        return self.keyboard.is_pressed(key);
+    }
+
+    pub fn get_keyup(&self) -> Option<u8> {
+        return self.keyboard.get_keyup();
     }
 
     pub fn read_byte(&self, addr: u16) -> u8 {

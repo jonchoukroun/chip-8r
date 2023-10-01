@@ -24,8 +24,6 @@ pub const FG_RED: u8 = 51;
 pub const FG_GREEN: u8 = 255;
 pub const FG_BLUE: u8 = 51;
 
-pub const KEYBOARD_SIZE: usize = 16;
-
 pub const MICROS_PER_FRAME: u128 = 1_000_000 / 60;
 pub const MICROS_PER_CYCLE: f32 = 1_000_000.0 / 700.0;
 

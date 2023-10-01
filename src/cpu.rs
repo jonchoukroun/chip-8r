@@ -1,4 +1,5 @@
-use std::time::Instant;
+use std::thread;
+use std::time::{Instant, Duration};
 
 use crate::bus::Bus;
 use crate::constants::{
@@ -9,7 +10,7 @@ use crate::constants::{
     SPRITE_WIDTH,
     FONT_HEIGHT,
     FONT_RAM_START,
-    MICROS_PER_FRAME
+    MICROS_PER_FRAME, MICROS_PER_CYCLE
 };
 use crate::error::{Error, ErrorType};
 use crate::registers::Registers;
@@ -48,32 +49,20 @@ impl CPU {
         });
     }
 
-    // pub fn check_input(&mut self, game_state: &mut GameState) {
-    //     if *game_state != GameState::Paused { return };
-        
-    //     match self.keyboard.key_state.iter()
-    //         .find_map(
-    //             |(k, &v)| if v == true { Some(k) } else { None }
-    //         ) {
-    //             None => (),
-    //             Some(scancode) => {
-    //                 let x = get_x(self.last_opcode);
-    //                 let kk = match to_hex(*scancode) {
-    //                     Some(x) => x,
-    //                     None => { return; },
-    //                 };
-    //                 self.registers.v[x as usize] = kk;
-    //                 *game_state = GameState::Playing;
-    //             }
-    //         }
-    // }
-
     pub fn run(&mut self) {
         loop {
+            let cycle_timer = Instant::now();
+
             if !self.bus.handle_input() { break; }
 
             if self.halted {
-                println!("is halted");
+                match self.bus.get_keyup() {
+                    Some(key) => {
+                        self.registers.v[get_x(self.opcode)] = key;
+                        self.halted = false;
+                    },
+                    _ => ()
+                }
             } else {
                 match self.fetch() {
                     Some(e) => {
@@ -93,7 +82,10 @@ impl CPU {
 
             self.handle_audio();
 
-            // adjust cycle timing
+            let diff = MICROS_PER_CYCLE - cycle_timer.elapsed().as_micros() as f32;
+            if diff > 0.0 {
+                thread::sleep(Duration::from_micros(diff as u64));
+            }
         }
     }
 
@@ -315,21 +307,20 @@ impl CPU {
         }
     }
 
-    // TODO: restore keypress check, from bus
     fn opcode_e(&mut self, opcode: u16) {
         let x = self.registers.v[get_x(opcode)];
         match get_kk(opcode) {
             // SKP Vx
             0x9e => {
-                // if is_pressed(x, &self.keyboard) {
-                //     self.registers.pc += 2;
-                // }
+                if self.bus.is_pressed(x) {
+                    self.registers.pc += 2;
+                }
             },
             // SKNP Vx
             0xa1 => {
-                // if !is_pressed(x, &self.keyboard) {
-                //     self.registers.pc += 2;
-                // }
+                if !self.bus.is_pressed(x) {
+                    self.registers.pc += 2;
+                }
             },
             _ => println!("Invalid opcode {:#X}", opcode),
         }
@@ -343,6 +334,7 @@ impl CPU {
             },
             // LD Vx, K
             0x0a => {
+                self.halted = true;
             },
             // LD DT, Vx
             0x15 => {
