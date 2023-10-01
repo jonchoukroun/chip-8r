@@ -78,6 +78,7 @@ impl CPU {
                 self.bus.render(&self.frame_buffer);
                 
                 self.decrement_timers();
+                self.fps_timer = Instant::now();
             }
 
             self.handle_audio();
