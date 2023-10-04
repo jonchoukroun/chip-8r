@@ -1,5 +1,7 @@
+extern crate rfd;
 extern crate sdl2;
 
+use rfd::FileDialog;
 use std::{
     error::Error,
     fs::File,
@@ -48,12 +50,12 @@ impl Bus {
 
     pub fn load_rom(&mut self) -> Result<(), Box<dyn Error>> {
         let mut buffer: Vec<u8> = Vec::new();
-        // let mut file = File::open("./roms/1-chip8-logo.ch8")?;
-        let mut file = File::open("./roms/2-ibm-logo.ch8")?;
-        // let mut file = File::open("./roms/3-corax+.ch8")?;
-        // let mut file = File::open("./roms/4-flags.ch8")?;
-        // let mut file = File::open("./roms/5-quirks.ch8")?;
-        // let mut file = File::open("./roms/6-keypad.ch8")?;
+        let path = FileDialog::new()
+            .add_filter("name", &["ch8"])
+            .set_directory("/")
+            .pick_file().unwrap();
+        let mut file = File::open(path)?;
+
         let rom_size = file.read_to_end(&mut buffer)?;
 
         if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
@@ -100,20 +102,6 @@ fn load_fonts(ram: &mut RamType) {
         ram[i] = FONT_SPRITES[i / FONT_HEIGHT][i % FONT_HEIGHT];
     }
 }
-
-// fn load_test_rom(ram: &mut RamType) {
-//     let rom: [u8; 6] = [
-//         // LD v0, 3 sec = 0xb4
-//         0x60, 0xb4,
-//         // LD ST, V0
-//         0xf0, 0x18,
-//         // LD v1, K
-//         0xf1, 0x0a
-//     ];
-//     for i in 0..rom.len() {
-//         ram[PROGRAM_RAM_START + i] = rom[i];
-//     }
-// }
 
 type FontHex = [u8; FONT_HEIGHT];
 const FONT_SPRITES: [FontHex; 16] = [
