@@ -18,18 +18,17 @@ pub struct Keyboard {
 
 impl Keyboard {
     pub fn new(sdl_context: &Sdl) -> Result<Keyboard, String> {
-        return Ok(
+        Ok(
             Keyboard {
                 key_state: KeyState::None,
                 event_pump: sdl_context.event_pump()?,
             }
-        );
+        )
     }
 
     pub fn handle_input(&mut self) -> bool {
-        match self.key_state {
-            KeyState::KeyUp(_) => { self.key_state = KeyState::None; }
-            _ => ()
+        if let KeyState::KeyUp(_) = self.key_state {
+            self.key_state = KeyState::None;
         };
 
         for event in self.event_pump.poll_iter() {
@@ -41,11 +40,8 @@ impl Keyboard {
                             return false;
                         },
                         s => {
-                            match to_hex(s) {
-                                Some(key) => {
-                                    self.key_state = KeyState::KeyDown(key)
-                                },
-                                _ => (),
+                            if let Some(key) =  to_hex(s) {
+                                self.key_state = KeyState::KeyDown(key)
                             };
                         },
                     }
@@ -62,11 +58,11 @@ impl Keyboard {
             }
         }
         
-        return true
+        true
     }
 
     pub fn is_pressed(&self, key: u8) -> bool {
-        return self.key_state == KeyState::KeyDown(key);
+        self.key_state == KeyState::KeyDown(key)
     }
 
     pub fn get_keyup(&self) -> Option<u8> {
@@ -78,7 +74,7 @@ impl Keyboard {
 }
 
 pub fn to_hex(scancode: Scancode) -> Option<u8> {
-    return match scancode {
+    match scancode {
         Scancode::X => Some(0x0),
         Scancode::Num1 => Some(0x1),
         Scancode::Num2 => Some(0x2),

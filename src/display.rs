@@ -39,19 +39,17 @@ impl Display {
         canvas.clear();
         canvas.present();
 
-        return Ok(Display { canvas });
+        Ok(Display { canvas })
     }
 
     pub fn render(&mut self, buffer: &FrameBuffer) {
         self.clear_canvas();
 
         self.canvas.set_draw_color(Color::RGB(FG_RED, FG_GREEN, FG_BLUE));
-        for i in 0..buffer.len() {
-            if buffer[i] == 1 {
-                let x = (i as i32 % DISPLAY_WIDTH as i32)
-                    * PIXEL_SIZE as i32;
-                let y = (i as i32 / DISPLAY_WIDTH as i32)
-                    * PIXEL_SIZE as i32;
+        for (i, pixel) in buffer.iter().enumerate() {
+            if *pixel == 1 {
+                let x = (i as i32 % DISPLAY_WIDTH as i32) * PIXEL_SIZE as i32;
+                let y = (i as i32 / DISPLAY_WIDTH as i32) * PIXEL_SIZE as i32;
                 let rect = Rect::new(
                     x,
                     y,

@@ -38,7 +38,7 @@ impl Bus {
             audio,
             display,
             keyboard,
-            ram: [0 as u8; (RAM_SIZE - 1) as usize],
+            ram: [0; (RAM_SIZE - 1) as usize],
         })
     }
 
@@ -49,27 +49,24 @@ impl Bus {
     pub fn load_rom(&mut self) -> Result<(), Box<dyn Error>> {
         let mut buffer: Vec<u8> = Vec::new();
         // let mut file = File::open("./roms/1-chip8-logo.ch8")?;
-        // let mut file = File::open("./roms/2-ibm-logo.ch8")?;
+        let mut file = File::open("./roms/2-ibm-logo.ch8")?;
         // let mut file = File::open("./roms/3-corax+.ch8")?;
         // let mut file = File::open("./roms/4-flags.ch8")?;
         // let mut file = File::open("./roms/5-quirks.ch8")?;
-        let mut file = File::open("./roms/6-keypad.ch8")?;
+        // let mut file = File::open("./roms/6-keypad.ch8")?;
         let rom_size = file.read_to_end(&mut buffer)?;
 
         if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
             return Err("invalid ROM".into());
         }
 
-        for i in 0..buffer.len() {
-            self.ram[PROGRAM_RAM_START + i] = buffer[i];
-        }
+        self.ram[PROGRAM_RAM_START..(buffer.len() + PROGRAM_RAM_START)]
+            .copy_from_slice(&buffer[..]);
 
         Ok(())
     }
 
-    pub fn handle_input(&mut self) -> bool {
-        return self.keyboard.handle_input();
-    }
+    pub fn handle_input(&mut self) -> bool { self.keyboard.handle_input() }
 
     pub fn render(&mut self, buffer: &FrameBuffer) {
         self.display.render(buffer);
@@ -87,17 +84,11 @@ impl Bus {
         }
     }
 
-    pub fn is_pressed(&self, key: u8) -> bool {
-        return self.keyboard.is_pressed(key);
-    }
+    pub fn is_pressed(&self, key: u8) -> bool { self.keyboard.is_pressed(key) }
 
-    pub fn get_keyup(&self) -> Option<u8> {
-        return self.keyboard.get_keyup();
-    }
+    pub fn get_keyup(&self) -> Option<u8> { self.keyboard.get_keyup() }
 
-    pub fn read_byte(&self, addr: u16) -> u8 {
-        return self.ram[(addr & 0xffff) as usize];
-    }
+    pub fn read_byte(&self, addr: u16) -> u8 { self.ram[addr as usize] }
 
     pub fn write_byte(&mut self, addr: usize, byte: u8) {
         self.ram[addr] = byte;

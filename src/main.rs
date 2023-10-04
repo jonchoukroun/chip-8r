@@ -7,10 +7,10 @@ mod error;
 mod keyboard;
 mod registers;
 
-use crate::cpu::CPU;
+use crate::cpu::Cpu;
 
 fn main() -> Result<(), String> {
-    let mut cpu = CPU::new()?;
+    let mut cpu = Cpu::new()?;
 
     cpu.run();
 

@@ -22,13 +22,13 @@ impl Audio {
             &desired_spec,
             |spec| {
                 println!("spec: {:?}", spec);
-                return Oscillator::new();
+                Oscillator::new()
         })?;
 
-        return Ok(Audio {
+        Ok(Audio {
             device,
             playing: false,
-        });
+        })
     }
 
     pub fn play(&mut self) {
@@ -55,26 +55,27 @@ struct Oscillator {
 impl Oscillator {
     pub fn new() -> Oscillator {
         let mut table: WaveTable = [0.0; WAVETABLE_SIZE];
-        for i in 0..table.len() {
-            table[i] = (
+        for (i, sample) in table.iter_mut().enumerate() {
+            *sample = (
                 2.0 * (i as  f32 / WAVETABLE_SIZE as f32).tan().atan()
             ).sin();
         }
 
         let phase_inc = PITCH * WAVETABLE_SIZE as f32 / SAMPLE_RATE;
 
-        return Oscillator {
+        Oscillator {
             table,
             cursor: 0.0,
             phase_inc,
-        };
+        }
     }
 
     pub fn get_sample(&mut self) -> f32 {
         let sample = self.lerp();
         self.cursor += self.phase_inc;
         self.cursor %= WAVETABLE_SIZE as f32;
-        return sample;
+
+        sample
     }
 
     fn lerp(&self) -> f32 {
@@ -84,8 +85,8 @@ impl Oscillator {
         let next_index_weight = self.cursor - first_index as f32;
         let first_index_weight = 1.0 - next_index_weight;
 
-        return first_index_weight * self.table[first_index]
-            + next_index_weight * self.table[next_index];
+        first_index_weight * self.table[first_index]
+            + next_index_weight * self.table[next_index]
     }
 }
 
@@ -93,7 +94,7 @@ impl Iterator for Oscillator {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        return Some(self.get_sample());
+        Some(self.get_sample())
     }
 }
 

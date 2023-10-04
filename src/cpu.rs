@@ -15,7 +15,7 @@ use crate::constants::{
 use crate::error::{Error, ErrorType};
 use crate::registers::Registers;
 
-pub struct CPU {
+pub struct Cpu {
     bus: Bus,
     registers: Registers,
     frame_buffer: FrameBuffer,
@@ -26,27 +26,26 @@ pub struct CPU {
 
 pub type FrameBuffer = [u8; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize];
     
-impl CPU {
-    pub fn new() -> Result<CPU, String> {
+impl Cpu {
+    pub fn new() -> Result<Cpu, String> {
         let mut bus = Bus::new()?;
         bus.init_ram();
-        match bus.load_rom() {
-            Err(_) => { return Err(String::from("Failed to load ROM")); },
-            _ => (),
+        if bus.load_rom().is_err() {
+            return Err(String::from("Failed to load ROM"));
         }
 
         let buffer: FrameBuffer = [
             0; (DISPLAY_WIDTH * DISPLAY_HEIGHT) as usize
         ];
 
-        return Ok(CPU {
+        Ok(Cpu {
             bus,
             registers: Registers::new(),
             frame_buffer: buffer,
             opcode: 0x0000,
             halted: false,
             fps_timer: Instant::now(),
-        });
+        })
     }
 
     pub fn run(&mut self) {
@@ -56,20 +55,14 @@ impl CPU {
             if !self.bus.handle_input() { break; }
 
             if self.halted {
-                match self.bus.get_keyup() {
-                    Some(key) => {
-                        self.registers.v[get_x(self.opcode)] = key;
-                        self.halted = false;
-                    },
-                    _ => ()
+                if let Some(key) = self.bus.get_keyup() {
+                    self.registers.v[get_x(self.opcode)] = key;
+                    self.halted = false;
                 }
             } else {
-                match self.fetch() {
-                    Some(e) => {
-                        println!("Fetch error: {}", e.to_string());
-                        break;
-                    },
-                    _ => ()
+                if let Some(e) = self.fetch() {
+                    println!("Fetch error: {}", e);
+                    break;
                 };
                 self.execute();
             }
@@ -100,7 +93,7 @@ impl CPU {
         self.registers.pc += 1;
 
         self.opcode = (high << 8) | low;
-        // println!("CPU fetch {:#X}, PC now at {:#X}", self.opcode, self.registers.pc);
+        // println!("Cpu fetch {:#X}, PC now at {:#X}", self.opcode, self.registers.pc);
 
         None
     }
@@ -123,7 +116,7 @@ impl CPU {
             0xd => { self.opcode_d(self.opcode); },
             0xe => { self.opcode_e(self.opcode); },
             0xf => { self.opcode_f(self.opcode); },
-            _ => { Some(Error::new(ErrorType::InvalidOpcode)); }
+            _ => { Error::new(ErrorType::InvalidOpcode); }
             
         };
     
@@ -142,7 +135,7 @@ impl CPU {
 }
 
 // Instructions
-impl CPU {
+impl Cpu {
     fn opcode_0(&mut self, opcode: u16) {
         match opcode {
             // CLS
@@ -287,19 +280,18 @@ impl CPU {
 
         for row in 0..get_n(opcode) {
             let sprite = self.bus.read_byte(i + row as u16);
-            for col in 0..(SPRITE_WIDTH as u8) {
+            for col in 0..(SPRITE_WIDTH) {
                 let pixel_x = x + col;
                 if pixel_x >= DISPLAY_WIDTH as u8 { break; };
 
                 let pixel_y = y + row;
                 if pixel_y >= DISPLAY_HEIGHT as u8 { break; };
 
-                let pixel_idx: usize = (
-                    pixel_y as usize * DISPLAY_WIDTH as usize + pixel_x as usize
-                ).into();
+                let pixel_idx = 
+                    pixel_y as usize * DISPLAY_WIDTH as usize + pixel_x as usize;
                 let current_pixel = self.frame_buffer[pixel_idx];
                 let new_pixel = (sprite & (BIT_MASK >> col)) >>
-                    (SPRITE_WIDTH - 1) - col as u8;
+                    ((SPRITE_WIDTH - 1) - col);
                 self.frame_buffer[pixel_idx] ^= new_pixel;
                 if current_pixel == 1 && self.frame_buffer[pixel_idx] == 1 {
                     self.registers.v[FLAG_REGISTER] = 1;
@@ -367,7 +359,7 @@ impl CPU {
             // LD [I], Vx
             0x55 => {
                 let i = self.registers.i as usize;
-                for j in 0..=get_x(opcode) as usize {
+                for j in 0..=get_x(opcode) {
                     self.bus.write_byte(i + j, self.registers.v[j]);
                 }
             },
@@ -386,22 +378,12 @@ impl CPU {
     }
 }
 
-fn get_x(opcode: u16) -> usize {
-    return ((opcode & 0x0f00) >> 8) as usize;
-}
+fn get_x(opcode: u16) -> usize { ((opcode & 0x0f00) >> 8) as usize }
 
-fn get_y(opcode: u16) -> usize {
-    return ((opcode & 0x00f0) >> 4) as usize;
-}
+fn get_y(opcode: u16) -> usize { ((opcode & 0x00f0) >> 4) as usize }
 
-fn get_n(opcode: u16) -> u8 {
-    return (opcode & 0x000f) as u8;
-}
+fn get_n(opcode: u16) -> u8 { (opcode & 0x000f) as u8 }
 
-fn get_kk(opcode: u16) -> u8 {
-    return (opcode & 0x00ff) as u8;
-}
+fn get_kk(opcode: u16) -> u8 { (opcode & 0x00ff) as u8 }
 
-fn get_nnn(opcode: u16) -> u16 {
-    return opcode & 0x0fff;
-}
+fn get_nnn(opcode: u16) -> u16 { opcode & 0x0fff }
