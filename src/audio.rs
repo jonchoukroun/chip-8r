@@ -20,8 +20,7 @@ impl Audio {
         let device = audio_subsystem.open_playback(
             None,
             &desired_spec,
-            |spec| {
-                println!("spec: {:?}", spec);
+            |_spec| {
                 Oscillator::new()
         })?;
 

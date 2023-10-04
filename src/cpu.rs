@@ -48,7 +48,7 @@ impl Cpu {
         })
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> bool {
         loop {
             let cycle_timer = Instant::now();
 
@@ -60,9 +60,8 @@ impl Cpu {
                     self.halted = false;
                 }
             } else {
-                if let Some(e) = self.fetch() {
-                    println!("Fetch error: {}", e);
-                    break;
+                if let Some(_e) = self.fetch() {
+                    return false;
                 };
                 self.execute();
             }
@@ -81,6 +80,8 @@ impl Cpu {
                 thread::sleep(Duration::from_micros(diff as u64));
             }
         }
+    
+        return true;
     }
 
     fn fetch(&mut self) -> Option<Error> {
@@ -93,7 +94,6 @@ impl Cpu {
         self.registers.pc += 1;
 
         self.opcode = (high << 8) | low;
-        // println!("Cpu fetch {:#X}, PC now at {:#X}", self.opcode, self.registers.pc);
 
         None
     }
@@ -148,7 +148,7 @@ impl Cpu {
                 self.registers.sp -= 1;
             }
             // SYS
-            nibble => println!("sysjmp => {}", nibble),
+            _ => ()
         }
     }
 
