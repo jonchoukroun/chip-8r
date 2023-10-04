@@ -1,7 +1,7 @@
-extern crate rfd;
+extern crate native_dialog;
 extern crate sdl2;
 
-use rfd::FileDialog;
+use native_dialog::{FileDialog, MessageDialog, MessageType};
 use std::{
     error::Error,
     fs::File,
@@ -49,21 +49,26 @@ impl Bus {
     }
 
     pub fn load_rom(&mut self) -> Result<(), Box<dyn Error>> {
+        show_intro();
+
         let mut buffer: Vec<u8> = Vec::new();
-        let path = FileDialog::new()
+        if let Some(path) = FileDialog::new()
+            .set_location("./")
             .add_filter("name", &["ch8"])
-            .set_directory("/")
-            .pick_file().unwrap();
-        let mut file = File::open(path)?;
+            .show_open_single_file().unwrap() {
+                let mut file = File::open(path)?;
 
-        let rom_size = file.read_to_end(&mut buffer)?;
+                let rom_size = file.read_to_end(&mut buffer)?;
 
-        if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
-            return Err("invalid ROM".into());
-        }
+                if rom_size > PROGRAM_RAM_END - PROGRAM_RAM_START {
+                    return Err("invalid ROM".into());
+                }
 
-        self.ram[PROGRAM_RAM_START..(buffer.len() + PROGRAM_RAM_START)]
-            .copy_from_slice(&buffer[..]);
+                self.ram[PROGRAM_RAM_START..(buffer.len() + PROGRAM_RAM_START)]
+                    .copy_from_slice(&buffer[..]);
+            } else {
+                return Err("Unable to load rom".into());
+            }
 
         Ok(())
     }
@@ -138,3 +143,19 @@ const FONT_SPRITES: [FontHex; 16] = [
     // f
     [0xf0, 0x80, 0xf0, 0x80, 0x80]
 ];
+
+fn show_intro() {
+    MessageDialog::new()
+        .set_type(MessageType::Info)
+        .set_title("Welcome to Chip-8!")
+        .set_text("This emulator was written in Rust, by Jon Choukroun.")
+        .show_alert()
+        .unwrap();
+
+    MessageDialog::new()
+        .set_type(MessageType::Info)
+        .set_title("Welcome to Chip-8!")
+        .set_text("Click `OK` to load a ROM. Press `Esc` at any time to quit.")
+        .show_alert()
+        .unwrap();
+}
