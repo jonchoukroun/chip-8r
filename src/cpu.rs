@@ -81,7 +81,7 @@ impl Cpu {
             }
         }
     
-        return true;
+        true
     }
 
     fn fetch(&mut self) -> Option<Error> {
