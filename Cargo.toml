@@ -2,8 +2,14 @@
 name = "chip_8r"
 version = "0.1.0"
 edition = "2021"
+description = "Chip-8 interpreter writting in Rust, with SDL"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.bundle]
+name = "Chip-8R"
+identifier = "com.choukroun.chip_8r"
+version = "1.0.0"
+copyright = "Copyright © Jon Choukroun 2023. All rights reserved."
+short_description = "Chip-8 interpreter writting in Rust, with SDL"
 
 [dependencies]
 native-dialog = "0.6.4"
